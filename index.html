@@ -44,10 +44,21 @@
         // Disable the idle timeout so it doesn't disconnect if you pause for a while
         options.disableIdleTimeout = true; 
         
-        // Start the Cast Receiver context
+        // Kill switch 1: Force the Nest Hub to treat this like a dumb TV, 
+        // preventing it from drawing its native touch UI overlay.
+        options.touchScreenOptimizedApp = false;
+        
         context.start(options);
 
-        context.getPlayerManager().setSupportedMediaCommands(0);
+        // Kill switch 2: Intercept every status update and forcefully 
+        // erase all supported media commands before the OS sees them.
+        context.getPlayerManager().setMessageInterceptor(
+            cast.framework.messages.MessageType.MEDIA_STATUS,
+            status => {
+                status.supportedMediaCommands = 0;
+                return status;
+            }
+        );
     </script>
 </body>
 </html>
