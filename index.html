@@ -44,7 +44,10 @@
         // Disable the idle timeout so it doesn't disconnect if you pause for a while
         options.disableIdleTimeout = true; 
         
+        // Start the Cast Receiver context
         context.start(options);
+
+        context.getPlayerManager().setSupportedMediaCommands(0);
     </script>
 </body>
 </html>
