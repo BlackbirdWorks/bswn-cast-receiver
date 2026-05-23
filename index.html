@@ -4,20 +4,39 @@
     <title>Black Screen Receiver</title>
     <style>
         body { 
-            background-color: black; 
+            background-color: black !important; 
             margin: 0; 
             overflow: hidden; 
         }
-        /* Completely hide the default media player UI */
+        
+        /* Make the player completely transparent */
         cast-media-player { 
-            display: none !important; 
+            opacity: 0 !important;
+            visibility: hidden !important;
+        }
+
+        /* Giant black blanket to cover the entire screen */
+        #black-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: black;
+            z-index: 999999;
+            pointer-events: none;
         }
     </style>
     <!-- Load the Google Cast Receiver SDK -->
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
+    <!-- The stubborn Cast player -->
     <cast-media-player></cast-media-player>
+    
+    <!-- Our foolproof pitch-black overlay -->
+    <div id="black-overlay"></div>
+
     <script>
         const context = cast.framework.CastReceiverContext.getInstance();
         const options = new cast.framework.CastReceiverOptions();
