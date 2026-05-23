@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Black Screen Receiver</title>
+    <style>
+        body { 
+            background-color: black; 
+            margin: 0; 
+            overflow: hidden; 
+        }
+        /* Completely hide the default media player UI */
+        cast-media-player { 
+            display: none !important; 
+        }
+    </style>
+    <!-- Load the Google Cast Receiver SDK -->
+    <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+</head>
+<body>
+    <cast-media-player></cast-media-player>
+    <script>
+        const context = cast.framework.CastReceiverContext.getInstance();
+        const options = new cast.framework.CastReceiverOptions();
+        
+        // Disable the idle timeout so it doesn't disconnect if you pause for a while
+        options.disableIdleTimeout = true; 
+        
+        context.start(options);
+    </script>
+</body>
+</html>
