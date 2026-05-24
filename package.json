@@ -1,0 +1,34 @@
+{
+  "name": "bswn-cast-receiver",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BlackbirdWorks/bswn-cast-receiver.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/BlackbirdWorks/bswn-cast-receiver/issues"
+  },
+  "homepage": "https://github.com/BlackbirdWorks/bswn-cast-receiver#readme",
+  "dependencies": {
+    "@regosen/gapless-5": "^1.6.2"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.7",
+    "jsdom": "^29.1.1",
+    "vite": "^8.0.14",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^4.1.7"
+  }
+}
