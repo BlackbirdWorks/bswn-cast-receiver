@@ -27,6 +27,12 @@ describe('Receiver App Logic', () => {
         // Mock cast globals
         global.cast = {
             framework: {
+                system: {
+                    EventType: {
+                        VISIBILITY_CHANGED: 'VISIBILITY_CHANGED',
+                        STANDBY_CHANGED: 'STANDBY_CHANGED'
+                    }
+                },
                 messages: {
                     StreamType: { BUFFERED: 'BUFFERED' },
                     PlayerState: { PAUSED: 'PAUSED', PLAYING: 'PLAYING' },
@@ -42,6 +48,7 @@ describe('Receiver App Logic', () => {
                 CastReceiverOptions: class {},
                 CastReceiverContext: {
                     getInstance: () => ({
+                        addEventListener: vi.fn(),
                         getPlayerManager: () => ({
                             setMediaElement: vi.fn(),
                             addEventListener: (event, cb) => {
@@ -100,7 +107,7 @@ describe('Receiver App Logic', () => {
         const dummyUrl = 'dummy-v2.mp4';
         await handleLoadRequest(mockRequest, dummyUrl, true);
         
-        const expectedFallbackUrl = 'https://blackbirdworks.github.io/bswn/assets/pink_noise.opus';
+        const expectedFallbackUrl = 'https://blackbirdworks.github.io/bswn-cast-receiver/assets/pink_noise.opus';
         
         // Gapless5 should receive the fallback URL
         expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(expectedFallbackUrl);
@@ -123,7 +130,7 @@ describe('Receiver App Logic', () => {
         const originalUrl = 'http://192.168.1.5:8080/audio/brown_noise.opus';
         mockRequest.media.contentUrl = originalUrl;
         await handleLoadRequest(mockRequest, 'dummy.mp4', true);
-        const expectedFallbackUrl = 'https://blackbirdworks.github.io/bswn/assets/brown_noise.opus';
+        const expectedFallbackUrl = 'https://blackbirdworks.github.io/bswn-cast-receiver/assets/brown_noise.opus';
         expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(expectedFallbackUrl);
     });
 
