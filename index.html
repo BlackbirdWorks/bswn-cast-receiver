@@ -1974,12 +1974,12 @@ loadingEl.style.fontFamily = 'sans-serif';
 loadingEl.style.display = 'none';
 document.body.appendChild(loadingEl);
 
-// Initialize Gapless5 for true zero-gap Web Audio looping
 const gaplessPlayer = new Gapless5({
     tracks: [],
     loop: true,
     singleMode: true,
-    useWebAudio: true
+    useWebAudio: true,
+    crossfade: 100 // Smooth out any Opus decoding gaps by crossfading the loop point
 });
 
 gaplessPlayer.onplay = () => {
@@ -1994,15 +1994,19 @@ const playerManager = context.getPlayerManager();
 const stealthPlayer = document.getElementById('stealth-audio-player');
 playerManager.setMediaElement(stealthPlayer);
 
-// Sync CAF play/pause state with Gapless5
-stealthPlayer.addEventListener('pause', () => {
-    console.log('[BSWN] CAF paused dummy video, pausing Gapless5');
-    gaplessPlayer.pause();
-});
-stealthPlayer.addEventListener('play', () => {
-    console.log('[BSWN] CAF played dummy video, playing Gapless5');
-    gaplessPlayer.play();
-});
+// Sync CAF play/pause state with Gapless5 safely via PlayerState
+playerManager.addEventListener(
+  cast.framework.events.EventType.PLAYER_STATE_CHANGED,
+  (event) => {
+    if (event.value === cast.framework.messages.PlayerState.PAUSED) {
+      console.log('[BSWN] CAF state PAUSED, pausing Gapless5');
+      gaplessPlayer.pause();
+    } else if (event.value === cast.framework.messages.PlayerState.PLAYING) {
+      console.log('[BSWN] CAF state PLAYING, playing Gapless5');
+      gaplessPlayer.play();
+    }
+  }
+);
 
 // Intercept every LOAD to:
 //   1. Log everything so we can debug via cast://inspect
