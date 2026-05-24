@@ -9,12 +9,21 @@
             overflow: hidden; 
         }
         
-        /* Make the player completely transparent */
+        /* Force every native UI element in the player to be invisible/black */
         cast-media-player { 
+            --splash-image: none !important;
+            --splash-color: black !important;
+            --background-image: none !important;
+            --background-color: black !important;
+            --progress-color: transparent !important;
+            --playback-logo-image: none !important;
+            --logo-image: none !important;
+            --watermark-image: none !important;
+            --theme-font-color: transparent !important; /* This hides the app name text! */
+            
             opacity: 0 !important;
             visibility: hidden !important;
         }
-
         /* Giant black blanket to cover the entire screen */
         #black-overlay {
             position: absolute;
@@ -22,7 +31,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: black;
+            background-color: black !important;
             z-index: 999999;
             pointer-events: none;
         }
