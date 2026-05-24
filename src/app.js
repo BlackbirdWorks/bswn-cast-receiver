@@ -164,6 +164,15 @@ export const initApp = () => {
             }
         );
 
+        // Fallback for Android TV OS backgrounding (Home button)
+        document.addEventListener('visibilitychange', () => {
+            console.log('[BSWN] Document visibility changed. hidden:', document.hidden);
+            if (document.hidden) {
+                gaplessPlayer.pause();
+                playerManager.pause();
+            }
+        });
+
         context.addEventListener(
             cast.framework.system.EventType.STANDBY_CHANGED,
             (event) => {
