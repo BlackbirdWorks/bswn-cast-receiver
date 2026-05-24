@@ -1962,6 +1962,30 @@ function Gapless5(options = {}, deprecated = {}) { // eslint-disable-line no-unu
 }));
   </script>
   <script>
+// UI Element for Loading
+const loadingEl = document.createElement('div');
+loadingEl.style.position = 'absolute';
+loadingEl.style.top = '50%';
+loadingEl.style.left = '50%';
+loadingEl.style.transform = 'translate(-50%, -50%)';
+loadingEl.style.color = '#555555';
+loadingEl.style.fontSize = '32px';
+loadingEl.style.fontFamily = 'sans-serif';
+loadingEl.style.display = 'none';
+document.body.appendChild(loadingEl);
+
+// Initialize Gapless5 for true zero-gap Web Audio looping
+const gaplessPlayer = new Gapless5({
+    tracks: [],
+    loop: true,
+    singleMode: true,
+    useWebAudio: true
+});
+
+gaplessPlayer.onplay = () => {
+    loadingEl.style.display = 'none';
+};
+
 const context = cast.framework.CastReceiverContext.getInstance();
 const playerManager = context.getPlayerManager();
 
@@ -2016,18 +2040,29 @@ playerManager.setMessageInterceptor(
             url = fallbackUrl;
         }
         
-        // Update the request with the final chosen URL
-        request.media.contentId = url;
-        request.media.contentUrl = url;
-        console.log(`[BSWN] Final playback URL: ${url}`);
     }
 
-    // Force infinite loop at the media element level — this is the most reliable
-    // way to ensure the audio never stops. CAF's REPEAT_MODE won't work well
-    // with a custom media element.
+    // Pass the lightweight dummy video to CAF to save memory, while Gapless5 handles the real audio
+    const dummyUrl = document.getElementById('dummy-video').src;
+    request.media.contentId = dummyUrl;
+    request.media.contentUrl = dummyUrl;
+    console.log(`[BSWN] Final playback URL (Gapless5): ${url}`);
+    console.log(`[BSWN] Fake CAF URL (Dummy Video): ${dummyUrl.substring(0, 30)}...`);
+
+    loadingEl.innerText = `Loading ${trackName || 'Audio'}...`;
+    loadingEl.style.display = 'block';
+
+    // Let Gapless5 handle the actual gapless Web Audio playback
+    gaplessPlayer.removeAllTracks();
+    gaplessPlayer.addTrack(url);
+    gaplessPlayer.play();
+
+    // Force infinite loop at the media element level for CAF, but mute it
+    // so CAF tracks state but Gapless5 produces the actual gapless audio
     const el = document.getElementById('stealth-audio-player');
     if (el) {
       el.loop = true;
+      el.volume = 0; // Mute the CAF element
     }
 
     // Also set repeatMode on the request so CAF tracks it correctly
