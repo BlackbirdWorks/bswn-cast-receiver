@@ -3,29 +3,66 @@
 <head>
     <title>Black Screen Receiver</title>
     <style>
-        body { 
-            background-color: black; 
-            margin: 0; 
-            overflow: hidden; 
-        }
+        body { background-color: black; margin: 0; overflow: hidden; }
     </style>
-    <!-- Load the Google Cast Receiver SDK -->
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
     <!-- 
-      We are completely deleting the <cast-media-player> tag!
-      Instead, we use a raw HTML5 audio tag that has absolutely zero visual UI.
+      We keep the audio tag so the Cast SDK can manage state and talk to the phone,
+      but we MUTE it so we don't hear its stuttering decoder loop.
     -->
-    <audio id="stealth-audio-player" loop></audio>
+    <audio id="stealth-audio-player" loop muted></audio>
 
     <script>
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         
-        // Explicitly tell the Cast Framework to pipe the audio into our invisible audio tag
-        // rather than spawning its default giant blue UI player.
+        // Let the Cast SDK manage its dummy audio tag
         playerManager.setMediaElement(document.getElementById('stealth-audio-player'));
+
+        // Initialize Web Audio API for flawless, sample-accurate playback
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let sourceNode = null;
+
+        // Intercept the LOAD request to download and decode the raw PCM audio
+        playerManager.setMessageInterceptor(
+            cast.framework.messages.MessageType.LOAD,
+            request => {
+                const url = request.media.contentId;
+                
+                if (sourceNode) {
+                    sourceNode.stop();
+                    sourceNode.disconnect();
+                }
+
+                // Fetch and decode the pristine audio into an uncompressed memory buffer
+                fetch(url)
+                    .then(response => response.arrayBuffer())
+                    .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
+                    .then(audioBuffer => {
+                        sourceNode = audioCtx.createBufferSource();
+                        sourceNode.buffer = audioBuffer;
+                        sourceNode.loop = true; // Flawless sample-accurate loop
+                        sourceNode.connect(audioCtx.destination);
+                        sourceNode.start(0);
+                    })
+                    .catch(console.error);
+                
+                // Return the request so the standard Cast SDK proceeds with its dummy player
+                return request;
+            }
+        );
+
+        // Handle phone's Play/Pause commands for the Web Audio node
+        playerManager.addEventListener(
+            cast.framework.events.EventType.PAUSE,
+            () => { audioCtx.suspend(); }
+        );
+        playerManager.addEventListener(
+            cast.framework.events.EventType.PLAYING,
+            () => { audioCtx.resume(); }
+        );
 
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true; 
