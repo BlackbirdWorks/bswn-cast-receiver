@@ -34,7 +34,8 @@ describe('Receiver App Logic', () => {
                 },
                 events: {
                     EventType: {
-                        PLAYER_STATE_CHANGED: 'PLAYER_STATE_CHANGED',
+                        PAUSE: 'PAUSE',
+                        PLAYING: 'PLAYING',
                         MEDIA_STATUS: 'MEDIA_STATUS'
                     }
                 },
@@ -45,7 +46,8 @@ describe('Receiver App Logic', () => {
                             setMediaElement: vi.fn(),
                             addEventListener: (event, cb) => {
                                 // Save callbacks to trigger them in tests
-                                if (event === 'PLAYER_STATE_CHANGED') global.mockPlayerStateCb = cb;
+                                if (event === 'PAUSE') global.mockPauseCb = cb;
+                                if (event === 'PLAYING') global.mockPlayingCb = cb;
                                 if (event === 'MEDIA_STATUS') global.mockMediaStatusCb = cb;
                             },
                             setMessageInterceptor: vi.fn()
@@ -142,11 +144,11 @@ describe('Receiver App Logic', () => {
         initApp();
         
         // Trigger PAUSED
-        global.mockPlayerStateCb({ value: 'PAUSED' });
+        global.mockPauseCb();
         expect(gaplessPlayer.pause).toHaveBeenCalled();
         
         // Trigger PLAYING
-        global.mockPlayerStateCb({ value: 'PLAYING' });
+        global.mockPlayingCb();
         expect(gaplessPlayer.play).toHaveBeenCalled();
     });
 

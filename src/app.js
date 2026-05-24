@@ -109,18 +109,21 @@ export const initApp = () => {
             playerManager.setMediaElement(stealthPlayer);
         }
 
-        // Sync CAF play/pause state with Gapless5 safely via PlayerState
+        // Sync CAF play/pause state with Gapless5 safely via PAUSE and PLAYING events
         playerManager.addEventListener(
-        cast.framework.events.EventType.PLAYER_STATE_CHANGED,
-        (event) => {
-            if (event.value === cast.framework.messages.PlayerState.PAUSED) {
-            console.log('[BSWN] CAF state PAUSED, pausing Gapless5');
-            gaplessPlayer.pause();
-            } else if (event.value === cast.framework.messages.PlayerState.PLAYING) {
-            console.log('[BSWN] CAF state PLAYING, playing Gapless5');
-            gaplessPlayer.play();
+            cast.framework.events.EventType.PAUSE,
+            () => {
+                console.log('[BSWN] CAF state PAUSED, pausing Gapless5');
+                gaplessPlayer.pause();
             }
-        }
+        );
+        
+        playerManager.addEventListener(
+            cast.framework.events.EventType.PLAYING,
+            () => {
+                console.log('[BSWN] CAF state PLAYING, playing Gapless5');
+                gaplessPlayer.play();
+            }
         );
 
         playerManager.setMessageInterceptor(
