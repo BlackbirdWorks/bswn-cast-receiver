@@ -173,16 +173,7 @@ export const initApp = () => {
             }
         });
 
-        context.addEventListener(
-            cast.framework.system.EventType.STANDBY_CHANGED,
-            (event) => {
-                console.log('[BSWN] App standby changed. isStandby:', event.isStandby);
-                if (event.isStandby) {
-                    gaplessPlayer.pause();
-                    playerManager.pause();
-                }
-            }
-        );
+
     }
 
     // Wake Lock: keep the screen on (works on some Cast devices/browsers)
