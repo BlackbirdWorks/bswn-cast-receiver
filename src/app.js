@@ -151,6 +151,13 @@ export const initApp = () => {
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true;
         context.start(options);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                console.log('[BSWN] App backgrounded, pausing playback');
+                playerManager.pause();
+            }
+        });
     }
 
     // Wake Lock: keep the screen on (works on some Cast devices/browsers)
