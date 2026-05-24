@@ -10,6 +10,11 @@ loadingEl.style.color = '#555555';
 loadingEl.style.fontSize = '32px';
 loadingEl.style.fontFamily = 'sans-serif';
 loadingEl.style.display = 'none';
+loadingEl.id = 'loading-text';
+loadingEl.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-family: sans-serif; font-size: 2rem; display: none;';
+
+// Track the current network request so we can abort it if the user spams next/prev
+let currentAbortController = null;
 
 export const gaplessPlayer = new Gapless5({
     tracks: [],
@@ -24,6 +29,14 @@ export const getFallbackUrl = (url, filename) => {
 };
 
 export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
+    // Abort any pending fetch request to prevent network congestion
+    if (currentAbortController) {
+        currentAbortController.abort();
+    }
+    const abortController = new AbortController();
+    currentAbortController = abortController;
+
+    console.log(`[BSWN] LOAD intercepted`);
     // Media3 puts the URI in contentId (and possibly contentUrl for newer SDK versions)
     let url = request.media.contentUrl || request.media.contentId;
     const trackName = (request.media.metadata && request.media.metadata.title) || '';
@@ -45,23 +58,26 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
         const fallbackUrl = getFallbackUrl(url, filename);
         
         try {
-            console.log(`[BSWN] Testing local server: ${url}`);
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
-            
-            const response = await fetch(url, { method: 'HEAD', signal: controller.signal });
+            const timeoutId = setTimeout(() => abortController.abort(), 2000);
+            const testResponse = await fetch(url, { method: 'HEAD', signal: abortController.signal });
             clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                console.warn(`[BSWN] Local server returned HTTP ${response.status}. Using fallback.`);
-                url = fallbackUrl;
-            } else {
-                console.log('[BSWN] Local server is reachable! Using local network.');
-            }
+            if (!testResponse.ok) throw new Error(`HTTP ${testResponse.status}`);
+            console.log(`[BSWN] Local server is reachable! Using local network.`);
         } catch (e) {
-            console.warn(`[BSWN] Local server unreachable (network/CORS/timeout). Using fallback:`, e.message);
-            url = fallbackUrl;
+            if (e.name === 'AbortError' && abortController !== currentAbortController) {
+                console.log(`[BSWN] Load request superseded by newer request. Aborting.`);
+            } else {
+                console.warn(`[BSWN] Local server unreachable (network/CORS/timeout). Using fallback:`, e.message);
+                url = fallbackUrl;
+            }
         }
+    }
+
+    // If a newer LOAD request came in while we were testing the network, abort this one
+    if (abortController !== currentAbortController) {
+        request.media.contentId = dummyUrl;
+        request.media.contentUrl = dummyUrl;
+        return request;
     }
 
     // Pass the lightweight dummy video to CAF to save memory, while Gapless5 handles the real audio
