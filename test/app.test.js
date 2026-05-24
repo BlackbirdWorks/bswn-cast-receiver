@@ -71,7 +71,7 @@ describe('Receiver App Logic', () => {
     });
 
     it('should set dummy video URL on request and play actual URL on Gapless5', async () => {
-        const dummyUrl = 'dummy.mp4';
+        const dummyUrl = 'dummy-v2.mp4';
         const expectedUrl = 'test-url';
 
         const result = await handleLoadRequest(mockRequest, dummyUrl, false);
@@ -97,7 +97,7 @@ describe('Receiver App Logic', () => {
         
         mockRequest.media.contentUrl = 'http://192.168.1.5:8080/audio/pink_noise.opus';
         
-        const dummyUrl = 'dummy.mp4';
+        const dummyUrl = 'dummy-v2.mp4';
         await handleLoadRequest(mockRequest, dummyUrl, true);
         
         const expectedFallbackUrl = 'https://blackbirdworks.github.io/bswn/assets/pink_noise.opus';
@@ -112,7 +112,7 @@ describe('Receiver App Logic', () => {
         const originalUrl = 'http://192.168.1.5:8080/audio/brown_noise.opus';
         mockRequest.media.contentUrl = originalUrl;
         
-        const dummyUrl = 'dummy.mp4';
+        const dummyUrl = 'dummy-v2.mp4';
         await handleLoadRequest(mockRequest, dummyUrl, true);
         
         // Gapless5 should receive the original local URL
