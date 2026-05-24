@@ -20,7 +20,7 @@ export const gaplessPlayer = new Gapless5({
 });
 
 export const getFallbackUrl = (url, filename) => {
-    return `https://blackbirdworks.github.io/bswn/assets/${filename}`;
+    return `https://blackbirdworks.github.io/bswn-cast-receiver/assets/${filename}`;
 };
 
 export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
