@@ -152,12 +152,28 @@ export const initApp = () => {
         options.disableIdleTimeout = true;
         context.start(options);
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
-                console.log('[BSWN] App backgrounded, pausing playback');
-                playerManager.pause();
+        // Handle TV visibility and standby changes properly using Cast SDK events
+        context.addEventListener(
+            cast.framework.system.EventType.VISIBILITY_CHANGED,
+            (event) => {
+                console.log('[BSWN] App visibility changed. isVisible:', event.isVisible);
+                if (!event.isVisible) {
+                    gaplessPlayer.pause();
+                    playerManager.pause();
+                }
             }
-        });
+        );
+
+        context.addEventListener(
+            cast.framework.system.EventType.STANDBY_CHANGED,
+            (event) => {
+                console.log('[BSWN] App standby changed. isStandby:', event.isStandby);
+                if (event.isStandby) {
+                    gaplessPlayer.pause();
+                    playerManager.pause();
+                }
+            }
+        );
     }
 
     // Wake Lock: keep the screen on (works on some Cast devices/browsers)
