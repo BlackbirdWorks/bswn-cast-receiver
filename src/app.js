@@ -184,8 +184,8 @@ export const initApp = () => {
         document.addEventListener('visibilitychange', () => {
             console.log('[BSWN] Document visibility changed. hidden:', document.hidden);
             if (document.hidden) {
-                gaplessPlayer.pause();
-                playerManager.pause();
+                // User explicitly requested to disconnect the cast entirely if the app is backgrounded
+                context.stop();
             }
         });
 
