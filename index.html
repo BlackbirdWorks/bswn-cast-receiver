@@ -1991,7 +1991,18 @@ const playerManager = context.getPlayerManager();
 
 // CRITICAL: Set media element FIRST before any interceptors or context.start().
 // We use a <video> tag so Android TV never shows a screensaver over a video element.
-playerManager.setMediaElement(document.getElementById('stealth-audio-player'));
+const stealthPlayer = document.getElementById('stealth-audio-player');
+playerManager.setMediaElement(stealthPlayer);
+
+// Sync CAF play/pause state with Gapless5
+stealthPlayer.addEventListener('pause', () => {
+    console.log('[BSWN] CAF paused dummy video, pausing Gapless5');
+    gaplessPlayer.pause();
+});
+stealthPlayer.addEventListener('play', () => {
+    console.log('[BSWN] CAF played dummy video, playing Gapless5');
+    gaplessPlayer.play();
+});
 
 // Intercept every LOAD to:
 //   1. Log everything so we can debug via cast://inspect
