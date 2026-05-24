@@ -4,70 +4,33 @@
     <title>Black Screen Receiver</title>
     <style>
         body { 
-            background-color: black !important; 
+            background-color: black; 
             margin: 0; 
             overflow: hidden; 
-        }
-        
-        /* Force every native UI element in the player to be invisible/black */
-        cast-media-player { 
-            --splash-image: none !important;
-            --splash-color: black !important;
-            --background-image: none !important;
-            --background-color: black !important;
-            --progress-color: transparent !important;
-            --playback-logo-image: none !important;
-            --logo-image: none !important;
-            --watermark-image: none !important;
-            --theme-font-color: transparent !important; /* This hides the app name text! */
-            
-            opacity: 0 !important;
-            visibility: hidden !important;
-        }
-        /* Giant black blanket to cover the entire screen */
-        #black-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: black !important;
-            z-index: 999999;
-            pointer-events: none;
         }
     </style>
     <!-- Load the Google Cast Receiver SDK -->
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-    <!-- The stubborn Cast player -->
-    <cast-media-player></cast-media-player>
-    
-    <!-- Our foolproof pitch-black overlay -->
-    <div id="black-overlay"></div>
+    <!-- 
+      We are completely deleting the <cast-media-player> tag!
+      Instead, we use a raw HTML5 audio tag that has absolutely zero visual UI.
+    -->
+    <audio id="stealth-audio-player"></audio>
 
     <script>
         const context = cast.framework.CastReceiverContext.getInstance();
-        const options = new cast.framework.CastReceiverOptions();
+        const playerManager = context.getPlayerManager();
         
-        // Disable the idle timeout so it doesn't disconnect if you pause for a while
+        // Explicitly tell the Cast Framework to pipe the audio into our invisible audio tag
+        // rather than spawning its default giant blue UI player.
+        playerManager.setMediaElement(document.getElementById('stealth-audio-player'));
+
+        const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true; 
         
-        // Kill switch 1: Force the Nest Hub to treat this like a dumb TV, 
-        // preventing it from drawing its native touch UI overlay.
-        options.touchScreenOptimizedApp = false;
-        
         context.start(options);
-
-        // Kill switch 2: Intercept every status update and forcefully 
-        // erase all supported media commands before the OS sees them.
-        context.getPlayerManager().setMessageInterceptor(
-            cast.framework.messages.MessageType.MEDIA_STATUS,
-            status => {
-                status.supportedMediaCommands = 0;
-                return status;
-            }
-        );
     </script>
 </body>
 </html>
