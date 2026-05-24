@@ -4,16 +4,49 @@
     <title>Black Screen Receiver</title>
     <style>
         body { background-color: black; margin: 0; overflow: hidden; }
+        #track-name {
+            color: rgba(255, 255, 255, 0.4);
+            font-family: 'Roboto', 'Helvetica', sans-serif;
+            font-size: 5vh;
+            position: absolute;
+            bottom: 10%;
+            left: 10%;
+            transition: opacity 2s ease-out;
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
+    <div id="track-name"></div>
     <audio id="stealth-audio-player"></audio>
+
     <script>
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         playerManager.setMediaElement(document.getElementById('stealth-audio-player'));
         
+        let hideTimeout;
+
+        playerManager.setMessageInterceptor(
+            cast.framework.messages.MessageType.LOAD,
+            request => {
+                const title = request.media.metadata?.title || "";
+                const trackElement = document.getElementById('track-name');
+                
+                trackElement.innerText = title;
+                trackElement.style.opacity = 1;
+                
+                clearTimeout(hideTimeout);
+                hideTimeout = setTimeout(() => {
+                    trackElement.style.opacity = 0;
+                }, 5000); // Fades out after 5 seconds
+                
+                return request;
+            }
+        );
+
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true; 
         context.start(options);
