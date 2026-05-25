@@ -98,6 +98,26 @@ describe('Receiver App Logic', () => {
         expect(loadingEl.innerText).toContain('Test Track');
     });
 
+    it('should set dummy audio URL if contentType indicates audio', async () => {
+        mockRequest.media.contentType = 'audio/ogg';
+        const expectedUrl = 'test-url';
+
+        const result = await handleLoadRequest(mockRequest, 'assets/dummy-v2.mp4', false);
+
+        // Gapless5 should receive the real URL
+        expect(gaplessPlayer.removeAllTracks).toHaveBeenCalled();
+        expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(expectedUrl);
+        expect(gaplessPlayer.play).toHaveBeenCalled();
+
+        // CAF Request should be modified to the dummy audio
+        expect(result.media.contentUrl).toBe('assets/dummy.mp3');
+        expect(result.media.contentId).toBe('assets/dummy.mp3');
+        expect(result.media.contentType).toBe('audio/mp3');
+        
+        // Reset for other tests
+        mockRequest.media.contentType = 'video/mp4';
+    });
+
     it('should fallback to GitHub Pages URL if local server fetch fails', async () => {
         // Simulate a timeout/error on the HEAD request
         global.fetch.mockRejectedValue(new Error('Network timeout'));
