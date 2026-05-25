@@ -78,7 +78,7 @@ describe('Receiver App Logic', () => {
     });
 
     it('should set dummy video URL on request and play actual URL on Gapless5', async () => {
-        const dummyUrl = 'dummy-v2.mp4';
+        const dummyUrl = 'assets/dummy-v2.mp4';
         const expectedUrl = 'test-url';
 
         const result = await handleLoadRequest(mockRequest, dummyUrl, false);

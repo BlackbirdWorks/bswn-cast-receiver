@@ -73,17 +73,22 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
         }
     }
 
+    const isAudioOnly = request.media.contentType && request.media.contentType.startsWith('audio/');
+    const finalDummyUrl = isAudioOnly ? 'assets/dummy.mp3' : (dummyUrl || 'assets/dummy-v2.mp4');
+
     // If a newer LOAD request came in while we were testing the network, abort this one
     if (abortController !== currentAbortController) {
-        request.media.contentId = dummyUrl;
-        request.media.contentUrl = dummyUrl;
+        request.media.contentId = finalDummyUrl;
+        request.media.contentUrl = finalDummyUrl;
+        request.media.contentType = isAudioOnly ? 'audio/mp3' : 'video/mp4';
         return request;
     }
 
     // Pass the lightweight dummy video to CAF to save memory, while Gapless5 handles the real audio
-    request.media.contentId = dummyUrl;
-    request.media.contentUrl = dummyUrl;
-    console.log(`[BSWN] Final playback URL (Gapless5): ${url}`);
+    request.media.contentId = finalDummyUrl;
+    request.media.contentUrl = finalDummyUrl;
+    request.media.contentType = isAudioOnly ? 'audio/mp3' : 'video/mp4';
+    console.log(`[BSWN] Final playback URL (Gapless5): ${url}. Dummy for CAF: ${finalDummyUrl}`);
 
     loadingEl.innerText = `Loading ${trackName || 'Audio'}...`;
     loadingEl.style.display = 'block';
