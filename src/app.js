@@ -2,16 +2,7 @@ import { Gapless5 } from '@regosen/gapless-5';
 
 // UI Element for Loading
 export const loadingEl = document.createElement('div');
-loadingEl.style.position = 'absolute';
-loadingEl.style.top = '50%';
-loadingEl.style.left = '50%';
-loadingEl.style.transform = 'translate(-50%, -50%)';
-loadingEl.style.color = '#555555';
-loadingEl.style.fontSize = '32px';
-loadingEl.style.fontFamily = 'sans-serif';
-loadingEl.style.display = 'none';
 loadingEl.id = 'loading-text';
-loadingEl.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-family: sans-serif; font-size: 2rem; display: none;';
 
 // Track the current network request so we can abort it if the user spams next/prev
 let currentAbortController = null;
@@ -120,12 +111,41 @@ export const initApp = () => {
         loadingEl.style.display = 'none';
     };
 
+    const isAndroidTV = navigator.userAgent.includes('Android') || navigator.userAgent.includes('BRAVIA');
+
+    // Dynamically insert players if they do not exist
+    let stealthPlayer = document.getElementById('stealth-audio-player');
+    if (!stealthPlayer) {
+        if (isAndroidTV) {
+            stealthPlayer = document.createElement('video');
+            stealthPlayer.style.cssText = 'opacity:0; position:absolute; top:0; left:0; width:1px; height:1px; pointer-events:none;';
+        } else {
+            stealthPlayer = document.createElement('audio');
+            stealthPlayer.style.display = 'none';
+        }
+        stealthPlayer.id = 'stealth-audio-player';
+        stealthPlayer.preload = 'auto';
+        document.body.appendChild(stealthPlayer);
+    }
+
+    let dummyVideo = document.getElementById('dummy-video');
+    if (isAndroidTV && !dummyVideo) {
+        dummyVideo = document.createElement('video');
+        dummyVideo.id = 'dummy-video';
+        dummyVideo.autoplay = true;
+        dummyVideo.loop = true;
+        dummyVideo.muted = true;
+        dummyVideo.playsInline = true;
+        dummyVideo.style.display = 'none';
+        dummyVideo.src = 'assets/dummy-v2.mp4';
+        document.body.appendChild(dummyVideo);
+    }
+
     if (typeof cast !== 'undefined' && cast.framework) {
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
 
         // CRITICAL: Set media element FIRST before any interceptors or context.start().
-        const stealthPlayer = document.getElementById('stealth-audio-player');
         if (stealthPlayer) {
             playerManager.setMediaElement(stealthPlayer);
         }
@@ -204,7 +224,7 @@ export const initApp = () => {
                 const wakeLock = await navigator.wakeLock.request('screen');
                 wakeLock.addEventListener('release', () => keepAwake());
             }
-        } catch (err) {
+        } catch {
             // Expected on devices that don't support the Wake Lock API — silent fail
         }
     }

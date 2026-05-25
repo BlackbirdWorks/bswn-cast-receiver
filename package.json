@@ -7,7 +7,8 @@
     "test": "vitest run",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -16,7 +17,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/BlackbirdWorks/bswn-cast-receiver/issues"
   },
@@ -25,7 +26,10 @@
     "@regosen/gapless-5": "^1.6.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^4.1.7",
+    "eslint": "^10.4.0",
+    "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "vite": "^8.0.14",
     "vite-plugin-singlefile": "^2.3.3",

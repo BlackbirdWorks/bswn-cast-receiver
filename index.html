@@ -19,20 +19,20 @@
     .container { text-align: center; }
     h1 { font-size: 4rem; font-weight: 300; letter-spacing: 2px; margin-bottom: 0.5rem; }
     #status { font-size: 1.5rem; color: #888; font-weight: 300; }
+    #loading-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-family: sans-serif;
+      font-size: 2rem;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-
-  <script>
-    const isAndroidTV = navigator.userAgent.includes('Android') || navigator.userAgent.includes('BRAVIA');
-    if (isAndroidTV) {
-      document.write('<video id="stealth-audio-player" preload="auto" style="opacity:0; position:absolute; top:0; left:0; width:1px; height:1px; pointer-events:none;"></video>');
-      document.write('<video id="dummy-video" autoplay loop muted playsinline style="display:none;" src="assets/dummy-v2.mp4"></video>');
-    } else {
-      document.write('<audio id="stealth-audio-player" preload="auto" style="display:none;"></audio>');
-    }
-  </script>
 
   <script type="module" src="/src/app.js"></script>
 </body>
