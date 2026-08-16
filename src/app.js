@@ -27,7 +27,6 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
     const abortController = new AbortController();
     currentAbortController = abortController;
 
-    console.log(`[BSWN] LOAD intercepted`);
     // Media3 puts the URI in contentId (and possibly contentUrl for newer SDK versions)
     let url = request.media.contentUrl || request.media.contentId;
     const trackName = (request.media.metadata && request.media.metadata.title) || '';
