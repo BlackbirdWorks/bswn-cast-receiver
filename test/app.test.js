@@ -145,6 +145,17 @@ describe('Receiver App Logic', () => {
         // Gapless5 should receive the original local URL
         expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(originalUrl);
     });
+
+    it('should support dynamic ephemeral port in local URL', async () => {
+        global.fetch.mockResolvedValue({ ok: true, status: 200 });
+
+        const dynamicPortUrl = 'http://192.168.1.5:45678/audio/brown_noise.opus';
+        mockRequest.media.contentUrl = dynamicPortUrl;
+
+        await handleLoadRequest(mockRequest, 'dummy-v2.mp4', false);
+
+        expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(dynamicPortUrl);
+    });
     it('should fallback when fetch responds with non-ok status', async () => {
         global.fetch.mockResolvedValue({ ok: false, status: 500 });
         const originalUrl = 'http://192.168.1.5:8080/audio/brown_noise.opus';
