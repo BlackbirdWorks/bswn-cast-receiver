@@ -43,7 +43,7 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
     }
 
     // Hybrid Fallback: If this is a local phone URL, check if the phone is actually reachable.
-    if (url.includes(':8080/audio/') || isLocal) { // isLocal is mainly for testing purposes
+    if (/\/audio\//.test(url) || isLocal) { // isLocal is mainly for testing purposes
         const filename = url.substring(url.lastIndexOf('/') + 1);
         const fallbackUrl = getFallbackUrl(url, filename);
         
