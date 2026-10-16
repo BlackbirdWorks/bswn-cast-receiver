@@ -198,4 +198,34 @@ describe('Receiver App Logic', () => {
         global.mockMediaStatusCb();
         expect(stealthPlayer.loop).toBe(true);
     });
+
+    it('should disable HTML5 audio fallback in Gapless5 to prevent duplicate downloads', () => {
+        expect(gaplessPlayer.useHTML5Audio).toBe(false);
+    });
+
+    it('should acquire wakeLock when visible and re-acquire on visibilitychange after release', async () => {
+        let releaseCb = null;
+        const mockWakeLockSentinel = {
+            addEventListener: vi.fn((event, cb) => {
+                if (event === 'release') releaseCb = cb;
+            })
+        };
+        const requestMock = vi.fn().mockResolvedValue(mockWakeLockSentinel);
+        Object.defineProperty(navigator, 'wakeLock', {
+            value: { request: requestMock },
+            configurable: true
+        });
+
+        initApp();
+        await Promise.resolve();
+        expect(requestMock).toHaveBeenCalledTimes(1);
+
+        // Simulate lock release and visibilitychange
+        releaseCb();
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+        expect(requestMock).toHaveBeenCalledTimes(2);
+
+        delete navigator.wakeLock;
+    });
 });
