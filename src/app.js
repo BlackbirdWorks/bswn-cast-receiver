@@ -6,12 +6,32 @@ loadingEl.id = 'loading-text';
 
 // Track the current network request so we can abort it if the user spams next/prev
 let currentAbortController = null;
+let wakeLock = null;
+let visibilityDisconnectHandler = null;
+
+// Wake Lock: keep the screen on (works on some Cast devices/browsers).
+// The browser releases the lock whenever the page is hidden and request() rejects while hidden,
+// so re-acquire on visibilitychange rather than recursively inside the 'release' event.
+async function keepAwake() {
+    if (wakeLock || !('wakeLock' in navigator) || document.visibilityState === 'hidden') {
+        return;
+    }
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => {
+            wakeLock = null;
+        });
+    } catch {
+        // Expected on devices that don't support the Wake Lock API — silent fail
+    }
+}
 
 export const gaplessPlayer = new Gapless5({
     tracks: [],
     loop: true,
     singleMode: true,
     useWebAudio: true,
+    useHTML5Audio: false,
     crossfade: 100 // Smooth out any Opus decoding gaps by crossfading the loop point
 });
 
@@ -205,28 +225,22 @@ export const initApp = () => {
         );
 
         // Fallback for Android TV OS backgrounding (Home button)
-        document.addEventListener('visibilitychange', () => {
+        if (visibilityDisconnectHandler) {
+            document.removeEventListener('visibilitychange', visibilityDisconnectHandler);
+        }
+        visibilityDisconnectHandler = () => {
             console.log('[BSWN] Document visibility changed. hidden:', document.hidden);
             if (document.hidden) {
                 // User explicitly requested to disconnect the cast entirely if the app is backgrounded
                 context.stop();
             }
-        });
-
-
+        };
+        document.addEventListener('visibilitychange', visibilityDisconnectHandler);
     }
 
-    // Wake Lock: keep the screen on (works on some Cast devices/browsers)
-    async function keepAwake() {
-        try {
-            if ('wakeLock' in navigator) {
-                const wakeLock = await navigator.wakeLock.request('screen');
-                wakeLock.addEventListener('release', () => keepAwake());
-            }
-        } catch {
-            // Expected on devices that don't support the Wake Lock API — silent fail
-        }
-    }
+    wakeLock = null;
+    document.removeEventListener('visibilitychange', keepAwake);
+    document.addEventListener('visibilitychange', keepAwake);
     keepAwake();
 };
 
