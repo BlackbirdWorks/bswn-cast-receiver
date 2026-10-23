@@ -48,7 +48,9 @@ describe('Receiver App Logic', () => {
                 CastReceiverOptions: class {},
                 CastReceiverContext: {
                     getInstance: () => ({
-                        addEventListener: vi.fn(),
+                        addEventListener: (event, cb) => {
+                            if (event === 'VISIBILITY_CHANGED') global.mockVisibilityCb = cb;
+                        },
                         getPlayerManager: () => ({
                             setMediaElement: vi.fn(),
                             addEventListener: (event, cb) => {
@@ -57,9 +59,17 @@ describe('Receiver App Logic', () => {
                                 if (event === 'PLAYING') global.mockPlayingCb = cb;
                                 if (event === 'MEDIA_STATUS') global.mockMediaStatusCb = cb;
                             },
-                            setMessageInterceptor: vi.fn()
+                            setMessageInterceptor: (type, cb) => {
+                                if (type === 'LOAD') global.mockLoadInterceptor = cb;
+                            },
+                            pause: () => {
+                                if (global.mockPlayerManagerPause) global.mockPlayerManagerPause();
+                            }
                         }),
-                        start: vi.fn()
+                        start: vi.fn(),
+                        stop: () => {
+                            if (global.mockContextStop) global.mockContextStop();
+                        }
                     })
                 }
             }
@@ -70,7 +80,9 @@ describe('Receiver App Logic', () => {
         vi.restoreAllMocks();
     });
 
-    it('should reject LOAD request if url is missing', async () => {
+    it('should reject LOAD request if request or url is missing', async () => {
+        expect(await handleLoadRequest(null, 'dummy.mp4', false)).toBeNull();
+        expect(await handleLoadRequest({}, 'dummy.mp4', false)).toBeNull();
         mockRequest.media.contentId = null;
         mockRequest.media.contentUrl = null;
         const result = await handleLoadRequest(mockRequest, 'dummy.mp4', false);
@@ -165,6 +177,45 @@ describe('Receiver App Logic', () => {
         expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(expectedFallbackUrl);
     });
 
+    it('should abort stale LOAD request when superseded by a newer LOAD request', async () => {
+        let rejectFirstFetch;
+        global.fetch
+            .mockImplementationOnce(
+                (_url, { signal }) =>
+                    new Promise((_resolve, reject) => {
+                        rejectFirstFetch = () => {
+                            const err = new Error('Aborted');
+                            err.name = 'AbortError';
+                            reject(err);
+                        };
+                        signal.addEventListener('abort', rejectFirstFetch);
+                    })
+            )
+            .mockResolvedValueOnce({ ok: true, status: 200 });
+
+        const req1 = {
+            media: {
+                contentUrl: 'http://192.168.1.5:8080/audio/pink_noise.opus',
+                metadata: { title: 'Pink' }
+            }
+        };
+        const req2 = {
+            media: {
+                contentUrl: 'http://192.168.1.5:8080/audio/rain.opus',
+                metadata: { title: 'Rain' }
+            }
+        };
+
+        const p1 = handleLoadRequest(req1, 'dummy-v2.mp4', true);
+        const p2 = handleLoadRequest(req2, 'dummy-v2.mp4', true);
+
+        const [res1, res2] = await Promise.all([p1, p2]);
+        expect(res1.media.contentUrl).toBe('dummy-v2.mp4');
+        expect(res2.media.contentUrl).toBe('dummy-v2.mp4');
+        expect(gaplessPlayer.addTrack).toHaveBeenCalledTimes(1);
+        expect(gaplessPlayer.addTrack).toHaveBeenCalledWith('http://192.168.1.5:8080/audio/rain.opus');
+    });
+
     it('should initialize the app correctly', () => {
         initApp();
         expect(document.body.contains(loadingEl)).toBe(true);
@@ -174,6 +225,26 @@ describe('Receiver App Logic', () => {
         initApp();
         loadingEl.style.display = 'block';
         gaplessPlayer.onplay();
+        expect(loadingEl.style.display).toBe('none');
+    });
+
+    it('should retry with fallback URL if gaplessPlayer fails on a local track', () => {
+        initApp();
+        gaplessPlayer.onerror('http://192.168.1.5:8080/audio/rain.opus', 'Decode error');
+        expect(gaplessPlayer.removeAllTracks).toHaveBeenCalled();
+        expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(
+            'https://blackbirdworks.github.io/bswn-cast-receiver/assets/rain.opus'
+        );
+        expect(gaplessPlayer.play).toHaveBeenCalled();
+    });
+
+    it('should hide loading text if gaplessPlayer fails on a fallback track', () => {
+        initApp();
+        loadingEl.style.display = 'block';
+        gaplessPlayer.onerror(
+            'https://blackbirdworks.github.io/bswn-cast-receiver/assets/rain.opus',
+            'Network error'
+        );
         expect(loadingEl.style.display).toBe('none');
     });
 
@@ -227,5 +298,46 @@ describe('Receiver App Logic', () => {
         expect(requestMock).toHaveBeenCalledTimes(2);
 
         delete navigator.wakeLock;
+    });
+
+    it('should dynamically create audio/video elements when missing and handle TV visibility/interceptor callbacks', async () => {
+        document.body.innerHTML = '';
+        const origUserAgent = navigator.userAgent;
+        Object.defineProperty(navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (Linux; Android 12; BRAVIA)',
+            configurable: true
+        });
+
+        vi.spyOn(gaplessPlayer, 'pause').mockImplementation(() => {});
+        global.mockPlayerManagerPause = vi.fn();
+        global.mockContextStop = vi.fn();
+
+        initApp();
+
+        expect(document.getElementById('stealth-audio-player')?.tagName).toBe('VIDEO');
+        expect(document.getElementById('dummy-video')?.tagName).toBe('VIDEO');
+
+        // Invoke LOAD interceptor registered in initApp
+        const intercepted = await global.mockLoadInterceptor(mockRequest);
+        expect(intercepted.media.contentId).toContain('dummy-v2.mp4');
+
+        // Invoke VISIBILITY_CHANGED callback with isVisible = false
+        global.mockVisibilityCb({ isVisible: false });
+        expect(gaplessPlayer.pause).toHaveBeenCalled();
+        expect(global.mockPlayerManagerPause).toHaveBeenCalled();
+
+        // Simulate document.hidden = true on visibilitychange
+        Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+        expect(global.mockContextStop).toHaveBeenCalled();
+
+        Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+        Object.defineProperty(navigator, 'userAgent', { value: origUserAgent, configurable: true });
+    });
+
+    it('should dynamically create audio element on non-Android-TV when missing', () => {
+        document.body.innerHTML = '';
+        initApp();
+        expect(document.getElementById('stealth-audio-player')?.tagName).toBe('AUDIO');
     });
 });
