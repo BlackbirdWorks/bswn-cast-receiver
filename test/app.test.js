@@ -217,7 +217,7 @@ describe('Receiver App Logic', () => {
     });
 
     it('should initialize the app correctly', () => {
-        initApp();
+        window.dispatchEvent(new Event('load'));
         expect(document.body.contains(loadingEl)).toBe(true);
     });
 

@@ -149,6 +149,7 @@ export const initApp = () => {
             }
         }
         loadingEl.style.display = 'none';
+        loadingEl.innerText = '';
     };
 
     const isAndroidTV = navigator.userAgent.includes('Android') || navigator.userAgent.includes('BRAVIA');
