@@ -102,6 +102,7 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
     if (abortController !== currentAbortController) {
         return request;
     }
+    currentAbortController = null;
 
     console.log(`[BSWN] Final playback URL (Gapless5): ${url}. Dummy for CAF: ${finalDummyUrl}`);
 
@@ -260,7 +261,10 @@ export const initApp = () => {
         document.addEventListener('visibilitychange', visibilityDisconnectHandler);
     }
 
-    wakeLock = null;
+    if (wakeLock) {
+        wakeLock.release().catch(() => {});
+        wakeLock = null;
+    }
     document.removeEventListener('visibilitychange', keepAwake);
     document.addEventListener('visibilitychange', keepAwake);
     keepAwake();

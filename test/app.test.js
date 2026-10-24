@@ -29,13 +29,11 @@ describe('Receiver App Logic', () => {
             framework: {
                 system: {
                     EventType: {
-                        VISIBILITY_CHANGED: 'VISIBILITY_CHANGED',
-                        STANDBY_CHANGED: 'STANDBY_CHANGED'
+                        VISIBILITY_CHANGED: 'VISIBILITY_CHANGED'
                     }
                 },
                 messages: {
                     StreamType: { BUFFERED: 'BUFFERED' },
-                    PlayerState: { PAUSED: 'PAUSED', PLAYING: 'PLAYING' },
                     MessageType: { LOAD: 'LOAD' }
                 },
                 events: {
@@ -279,7 +277,8 @@ describe('Receiver App Logic', () => {
         const mockWakeLockSentinel = {
             addEventListener: vi.fn((event, cb) => {
                 if (event === 'release') releaseCb = cb;
-            })
+            }),
+            release: vi.fn().mockResolvedValue(undefined)
         };
         const requestMock = vi.fn().mockResolvedValue(mockWakeLockSentinel);
         Object.defineProperty(navigator, 'wakeLock', {
