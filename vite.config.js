@@ -9,9 +9,9 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.js'],
       thresholds: {
-        lines: 85,
+        lines: 95,
         functions: 85,
-        statements: 85
+        statements: 95
       }
     }
   }

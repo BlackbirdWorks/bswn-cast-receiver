@@ -41,6 +41,17 @@ export const getFallbackUrl = (filename) => {
 
 const extractFilename = (url) => url.substring(url.lastIndexOf('/') + 1).split(/[?#]/)[0];
 
+const hideLoading = () => {
+    loadingEl.style.display = 'none';
+    loadingEl.innerText = '';
+};
+
+const loadAndPlayTrack = (url) => {
+    gaplessPlayer.removeAllTracks();
+    gaplessPlayer.addTrack(url);
+    gaplessPlayer.play();
+};
+
 export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
     if (!request || !request.media) {
         console.error('[BSWN] Invalid LOAD request — aborting');
@@ -110,9 +121,7 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
     loadingEl.style.display = 'block';
 
     // Let Gapless5 handle the actual gapless Web Audio playback
-    gaplessPlayer.removeAllTracks();
-    gaplessPlayer.addTrack(url);
-    gaplessPlayer.play();
+    loadAndPlayTrack(url);
 
     const el = document.getElementById('stealth-audio-player');
     if (el) {
@@ -132,10 +141,7 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
 export const initApp = () => {
     document.body.appendChild(loadingEl);
 
-    gaplessPlayer.onplay = () => {
-        loadingEl.style.display = 'none';
-        loadingEl.innerText = '';
-    };
+    gaplessPlayer.onplay = hideLoading;
 
     gaplessPlayer.onerror = (audioPath, error) => {
         console.error('[BSWN] Gapless5 playback error:', audioPath, error);
@@ -143,14 +149,11 @@ export const initApp = () => {
             const fallbackUrl = getFallbackUrl(extractFilename(audioPath));
             if (audioPath !== fallbackUrl) {
                 console.warn('[BSWN] Retrying failed local track with fallback:', fallbackUrl);
-                gaplessPlayer.removeAllTracks();
-                gaplessPlayer.addTrack(fallbackUrl);
-                gaplessPlayer.play();
+                loadAndPlayTrack(fallbackUrl);
                 return;
             }
         }
-        loadingEl.style.display = 'none';
-        loadingEl.innerText = '';
+        hideLoading();
     };
 
     const isAndroidTV = navigator.userAgent.includes('Android') || navigator.userAgent.includes('BRAVIA');
@@ -272,7 +275,5 @@ export const initApp = () => {
 
 // Auto-init if we are in the browser
 if (typeof window !== 'undefined') {
-    window.addEventListener('load', () => {
-        initApp();
-    });
+    window.addEventListener('load', initApp);
 }
