@@ -147,11 +147,9 @@ export const initApp = () => {
         console.error('[BSWN] Gapless5 playback error:', audioPath, error);
         if (audioPath && /\/audio\//.test(audioPath)) {
             const fallbackUrl = getFallbackUrl(extractFilename(audioPath));
-            if (audioPath !== fallbackUrl) {
-                console.warn('[BSWN] Retrying failed local track with fallback:', fallbackUrl);
-                loadAndPlayTrack(fallbackUrl);
-                return;
-            }
+            console.warn('[BSWN] Retrying failed local track with fallback:', fallbackUrl);
+            loadAndPlayTrack(fallbackUrl);
+            return;
         }
         hideLoading();
     };
