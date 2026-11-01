@@ -52,7 +52,7 @@ const loadAndPlayTrack = (url) => {
     gaplessPlayer.play();
 };
 
-export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
+export const handleLoadRequest = async (request, dummyUrl) => {
     if (!request || !request.media) {
         console.error('[BSWN] Invalid LOAD request — aborting');
         return null;
@@ -81,7 +81,7 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
     currentAbortController = abortController;
 
     // Hybrid Fallback: If this is a local phone URL, check if the phone is actually reachable.
-    if (/\/audio\//.test(url) || isLocal) { // isLocal is mainly for testing purposes
+    if (/\/audio\//.test(url)) {
         const filename = extractFilename(url);
         const fallbackUrl = getFallbackUrl(filename);
         const timeoutId = setTimeout(() => abortController.abort(), 2000);
@@ -264,10 +264,6 @@ export const initApp = () => {
         document.addEventListener('visibilitychange', visibilityDisconnectHandler);
     }
 
-    if (wakeLock) {
-        wakeLock.release().catch(() => {});
-        wakeLock = null;
-    }
     document.removeEventListener('visibilitychange', keepAwake);
     document.addEventListener('visibilitychange', keepAwake);
     keepAwake();
