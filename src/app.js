@@ -17,12 +17,13 @@ async function keepAwake() {
         return;
     }
     try {
-        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock = navigator.wakeLock.request('screen');
+        wakeLock = await wakeLock;
         wakeLock.addEventListener('release', () => {
             wakeLock = null;
         });
     } catch {
-        // Expected on devices that don't support the Wake Lock API — silent fail
+        wakeLock = null;
     }
 }
 
@@ -73,6 +74,9 @@ export const handleLoadRequest = async (request, dummyUrl) => {
         return null; // Reject the LOAD
     }
 
+    loadingEl.innerText = `Loading ${trackName || 'Audio'}...`;
+    loadingEl.style.display = 'block';
+
     // Abort any pending fetch request to prevent network congestion
     if (currentAbortController) {
         currentAbortController.abort();
@@ -116,9 +120,6 @@ export const handleLoadRequest = async (request, dummyUrl) => {
     currentAbortController = null;
 
     console.log(`[BSWN] Final playback URL (Gapless5): ${url}. Dummy for CAF: ${finalDummyUrl}`);
-
-    loadingEl.innerText = `Loading ${trackName || 'Audio'}...`;
-    loadingEl.style.display = 'block';
 
     // Let Gapless5 handle the actual gapless Web Audio playback
     loadAndPlayTrack(url);

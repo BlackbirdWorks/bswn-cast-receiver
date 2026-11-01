@@ -317,11 +317,14 @@ describe('Receiver App Logic', () => {
         await Promise.resolve();
         expect(requestMock).toHaveBeenCalledTimes(1);
 
-        // Simulate lock release and visibilitychange
+        // Simulate lock release, rejection on first retry, and re-acquire on next visibilitychange
         releaseCb();
+        requestMock.mockRejectedValueOnce(new Error('NotAllowedError'));
         document.dispatchEvent(new Event('visibilitychange'));
         await Promise.resolve();
-        expect(requestMock).toHaveBeenCalledTimes(2);
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+        expect(requestMock).toHaveBeenCalledTimes(3);
 
         delete navigator.wakeLock;
     });
