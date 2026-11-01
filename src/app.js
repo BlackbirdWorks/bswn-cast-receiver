@@ -17,12 +17,13 @@ async function keepAwake() {
         return;
     }
     try {
-        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock = navigator.wakeLock.request('screen');
+        wakeLock = await wakeLock;
         wakeLock.addEventListener('release', () => {
             wakeLock = null;
         });
     } catch {
-        // Expected on devices that don't support the Wake Lock API — silent fail
+        wakeLock = null;
     }
 }
 
@@ -52,7 +53,7 @@ const loadAndPlayTrack = (url) => {
     gaplessPlayer.play();
 };
 
-export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
+export const handleLoadRequest = async (request, dummyUrl) => {
     if (!request || !request.media) {
         console.error('[BSWN] Invalid LOAD request — aborting');
         return null;
@@ -73,6 +74,9 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
         return null; // Reject the LOAD
     }
 
+    loadingEl.innerText = `Loading ${trackName || 'Audio'}...`;
+    loadingEl.style.display = 'block';
+
     // Abort any pending fetch request to prevent network congestion
     if (currentAbortController) {
         currentAbortController.abort();
@@ -81,7 +85,7 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
     currentAbortController = abortController;
 
     // Hybrid Fallback: If this is a local phone URL, check if the phone is actually reachable.
-    if (/\/audio\//.test(url) || isLocal) { // isLocal is mainly for testing purposes
+    if (/\/audio\//.test(url)) {
         const filename = extractFilename(url);
         const fallbackUrl = getFallbackUrl(filename);
         const timeoutId = setTimeout(() => abortController.abort(), 2000);
@@ -117,9 +121,6 @@ export const handleLoadRequest = async (request, dummyUrl, isLocal = false) => {
 
     console.log(`[BSWN] Final playback URL (Gapless5): ${url}. Dummy for CAF: ${finalDummyUrl}`);
 
-    loadingEl.innerText = `Loading ${trackName || 'Audio'}...`;
-    loadingEl.style.display = 'block';
-
     // Let Gapless5 handle the actual gapless Web Audio playback
     loadAndPlayTrack(url);
 
@@ -147,11 +148,9 @@ export const initApp = () => {
         console.error('[BSWN] Gapless5 playback error:', audioPath, error);
         if (audioPath && /\/audio\//.test(audioPath)) {
             const fallbackUrl = getFallbackUrl(extractFilename(audioPath));
-            if (audioPath !== fallbackUrl) {
-                console.warn('[BSWN] Retrying failed local track with fallback:', fallbackUrl);
-                loadAndPlayTrack(fallbackUrl);
-                return;
-            }
+            console.warn('[BSWN] Retrying failed local track with fallback:', fallbackUrl);
+            loadAndPlayTrack(fallbackUrl);
+            return;
         }
         hideLoading();
     };
@@ -264,10 +263,6 @@ export const initApp = () => {
         document.addEventListener('visibilitychange', visibilityDisconnectHandler);
     }
 
-    if (wakeLock) {
-        wakeLock.release().catch(() => {});
-        wakeLock = null;
-    }
     document.removeEventListener('visibilitychange', keepAwake);
     document.addEventListener('visibilitychange', keepAwake);
     keepAwake();

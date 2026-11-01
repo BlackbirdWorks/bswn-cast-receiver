@@ -79,11 +79,11 @@ describe('Receiver App Logic', () => {
     });
 
     it('should reject LOAD request if request or url is missing', async () => {
-        expect(await handleLoadRequest(null, 'dummy.mp4', false)).toBeNull();
-        expect(await handleLoadRequest({}, 'dummy.mp4', false)).toBeNull();
+        expect(await handleLoadRequest(null, 'dummy.mp4')).toBeNull();
+        expect(await handleLoadRequest({}, 'dummy.mp4')).toBeNull();
         mockRequest.media.contentId = null;
         mockRequest.media.contentUrl = null;
-        const result = await handleLoadRequest(mockRequest, 'dummy.mp4', false);
+        const result = await handleLoadRequest(mockRequest, 'dummy.mp4');
         expect(result).toBeNull();
     });
 
@@ -91,7 +91,7 @@ describe('Receiver App Logic', () => {
         const dummyUrl = 'assets/dummy-v2.mp4';
         const expectedUrl = 'test-url';
 
-        const result = await handleLoadRequest(mockRequest, dummyUrl, false);
+        const result = await handleLoadRequest(mockRequest, dummyUrl);
 
         // Gapless5 should receive the real URL
         expect(gaplessPlayer.removeAllTracks).toHaveBeenCalled();
@@ -112,7 +112,7 @@ describe('Receiver App Logic', () => {
         mockRequest.media.contentType = 'audio/ogg';
         const expectedUrl = 'test-url';
 
-        const result = await handleLoadRequest(mockRequest, 'assets/dummy-v2.mp4', false);
+        const result = await handleLoadRequest(mockRequest, 'assets/dummy-v2.mp4');
 
         // Gapless5 should receive the real URL
         expect(gaplessPlayer.removeAllTracks).toHaveBeenCalled();
@@ -135,12 +135,39 @@ describe('Receiver App Logic', () => {
         mockRequest.media.contentUrl = 'http://192.168.1.5:8080/audio/pink_noise.opus';
         
         const dummyUrl = 'dummy-v2.mp4';
-        await handleLoadRequest(mockRequest, dummyUrl, true);
+        await handleLoadRequest(mockRequest, dummyUrl);
         
         const expectedFallbackUrl = 'https://blackbirdworks.github.io/bswn-cast-receiver/assets/pink_noise.opus';
         
         // Gapless5 should receive the fallback URL
         expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(expectedFallbackUrl);
+    });
+
+    it('should fallback to GitHub Pages URL when local server fetch times out', async () => {
+        vi.useFakeTimers();
+        try {
+            global.fetch.mockImplementation(
+                (_url, { signal }) =>
+                    new Promise((_resolve, reject) => {
+                        signal.addEventListener('abort', () => {
+                            const err = new Error('Aborted');
+                            err.name = 'AbortError';
+                            reject(err);
+                        });
+                    })
+            );
+
+            mockRequest.media.contentUrl = 'http://192.168.1.5:8080/audio/pink_noise.opus';
+            const promise = handleLoadRequest(mockRequest, 'dummy-v2.mp4');
+            await vi.advanceTimersByTimeAsync(2000);
+            await promise;
+
+            expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(
+                'https://blackbirdworks.github.io/bswn-cast-receiver/assets/pink_noise.opus'
+            );
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('should use local URL if local server responds OK', async () => {
@@ -150,7 +177,7 @@ describe('Receiver App Logic', () => {
         mockRequest.media.contentUrl = originalUrl;
         
         const dummyUrl = 'dummy-v2.mp4';
-        await handleLoadRequest(mockRequest, dummyUrl, true);
+        await handleLoadRequest(mockRequest, dummyUrl);
         
         // Gapless5 should receive the original local URL
         expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(originalUrl);
@@ -162,7 +189,7 @@ describe('Receiver App Logic', () => {
         const dynamicPortUrl = 'http://192.168.1.5:45678/audio/brown_noise.opus';
         mockRequest.media.contentUrl = dynamicPortUrl;
 
-        await handleLoadRequest(mockRequest, 'dummy-v2.mp4', false);
+        await handleLoadRequest(mockRequest, 'dummy-v2.mp4');
 
         expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(dynamicPortUrl);
     });
@@ -170,7 +197,7 @@ describe('Receiver App Logic', () => {
         global.fetch.mockResolvedValue({ ok: false, status: 500 });
         const originalUrl = 'http://192.168.1.5:8080/audio/brown_noise.opus';
         mockRequest.media.contentUrl = originalUrl;
-        await handleLoadRequest(mockRequest, 'dummy.mp4', true);
+        await handleLoadRequest(mockRequest, 'dummy.mp4');
         const expectedFallbackUrl = 'https://blackbirdworks.github.io/bswn-cast-receiver/assets/brown_noise.opus';
         expect(gaplessPlayer.addTrack).toHaveBeenCalledWith(expectedFallbackUrl);
     });
@@ -204,8 +231,8 @@ describe('Receiver App Logic', () => {
             }
         };
 
-        const p1 = handleLoadRequest(req1, 'dummy-v2.mp4', true);
-        const p2 = handleLoadRequest(req2, 'dummy-v2.mp4', true);
+        const p1 = handleLoadRequest(req1, 'dummy-v2.mp4');
+        const p2 = handleLoadRequest(req2, 'dummy-v2.mp4');
 
         const [res1, res2] = await Promise.all([p1, p2]);
         expect(res1.media.contentUrl).toBe('dummy-v2.mp4');
@@ -290,11 +317,14 @@ describe('Receiver App Logic', () => {
         await Promise.resolve();
         expect(requestMock).toHaveBeenCalledTimes(1);
 
-        // Simulate lock release and visibilitychange
+        // Simulate lock release, rejection on first retry, and re-acquire on next visibilitychange
         releaseCb();
+        requestMock.mockRejectedValueOnce(new Error('NotAllowedError'));
         document.dispatchEvent(new Event('visibilitychange'));
         await Promise.resolve();
-        expect(requestMock).toHaveBeenCalledTimes(2);
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+        expect(requestMock).toHaveBeenCalledTimes(3);
 
         delete navigator.wakeLock;
     });
