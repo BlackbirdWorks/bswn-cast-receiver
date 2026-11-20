@@ -105,7 +105,7 @@ describe('Receiver App Logic', () => {
 
         // Loading UI should be updated
         expect(loadingEl.style.display).toBe('block');
-        expect(loadingEl.innerText).toContain('Test Track');
+        expect(loadingEl.textContent).toContain('Test Track');
     });
 
     it('should set dummy audio URL if contentType indicates audio', async () => {
@@ -299,6 +299,41 @@ describe('Receiver App Logic', () => {
         expect(gaplessPlayer.useHTML5Audio).toBe(false);
     });
 
+    it('should configure 1s tick interval on Gapless5 to reduce idle wakeups', () => {
+        expect(gaplessPlayer.tickMS).toBe(1000);
+    });
+
+    it('should skip reloading when the requested track is already decoded in Gapless5', async () => {
+        vi.spyOn(gaplessPlayer, 'getTrack').mockReturnValue('test-url');
+        vi.spyOn(gaplessPlayer, 'currentLength').mockReturnValue(5000);
+
+        await handleLoadRequest(mockRequest, 'assets/dummy-v2.mp4');
+
+        expect(gaplessPlayer.removeAllTracks).not.toHaveBeenCalled();
+        expect(gaplessPlayer.addTrack).not.toHaveBeenCalled();
+        expect(gaplessPlayer.play).toHaveBeenCalled();
+        expect(loadingEl.style.display).toBe('none');
+        expect(loadingEl.textContent).toBe('');
+    });
+
+    it('should pass targetAddressSpace local or loopback on local server HEAD probes', async () => {
+        global.fetch.mockResolvedValue({ ok: true, status: 200 });
+
+        mockRequest.media.contentUrl = 'http://192.168.1.5:8080/audio/rain.opus';
+        await handleLoadRequest(mockRequest, 'dummy-v2.mp4');
+        expect(global.fetch).toHaveBeenLastCalledWith(
+            'http://192.168.1.5:8080/audio/rain.opus',
+            expect.objectContaining({ method: 'HEAD', targetAddressSpace: 'local' })
+        );
+
+        mockRequest.media.contentUrl = 'http://127.0.0.1:8080/audio/rain.opus';
+        await handleLoadRequest(mockRequest, 'dummy-v2.mp4');
+        expect(global.fetch).toHaveBeenLastCalledWith(
+            'http://127.0.0.1:8080/audio/rain.opus',
+            expect.objectContaining({ method: 'HEAD', targetAddressSpace: 'loopback' })
+        );
+    });
+
     it('should acquire wakeLock when visible and re-acquire on visibilitychange after release', async () => {
         let releaseCb = null;
         const mockWakeLockSentinel = {
@@ -358,6 +393,7 @@ describe('Receiver App Logic', () => {
         // Simulate document.hidden = true on visibilitychange
         Object.defineProperty(document, 'hidden', { value: true, configurable: true });
         document.dispatchEvent(new Event('visibilitychange'));
+        expect(gaplessPlayer.pause).toHaveBeenCalledTimes(2);
         expect(global.mockContextStop).toHaveBeenCalled();
 
         Object.defineProperty(document, 'hidden', { value: false, configurable: true });
