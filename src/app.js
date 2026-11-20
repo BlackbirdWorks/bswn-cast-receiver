@@ -35,6 +35,7 @@ export const gaplessPlayer = new Gapless5({
     useHTML5Audio: false,
     crossfade: 100 // Smooth out any Opus decoding gaps by crossfading the loop point
 });
+gaplessPlayer.tickMS = 1000;
 
 export const getFallbackUrl = (filename) => {
     return `https://blackbirdworks.github.io/bswn-cast-receiver/assets/${filename}`;
@@ -42,12 +43,20 @@ export const getFallbackUrl = (filename) => {
 
 const extractFilename = (url) => url.substring(url.lastIndexOf('/') + 1).split(/[?#]/)[0];
 
+const getTargetAddressSpace = (url) =>
+    /^https?:\/\/((?:[^/:]+\.)?localhost|127\.\d+\.\d+\.\d+|\[::1\])(?::|\/|$)/i.test(url) ? 'loopback' : 'local';
+
 const hideLoading = () => {
     loadingEl.style.display = 'none';
-    loadingEl.innerText = '';
+    loadingEl.textContent = '';
 };
 
 const loadAndPlayTrack = (url) => {
+    if (gaplessPlayer.getTrack() === url && gaplessPlayer.currentLength() > 0) {
+        gaplessPlayer.play();
+        hideLoading();
+        return;
+    }
     gaplessPlayer.removeAllTracks();
     gaplessPlayer.addTrack(url);
     gaplessPlayer.play();
@@ -74,7 +83,7 @@ export const handleLoadRequest = async (request, dummyUrl) => {
         return null; // Reject the LOAD
     }
 
-    loadingEl.innerText = `Loading ${trackName || 'Audio'}...`;
+    loadingEl.textContent = `Loading ${trackName || 'Audio'}...`;
     loadingEl.style.display = 'block';
 
     // Abort any pending fetch request to prevent network congestion
@@ -90,7 +99,11 @@ export const handleLoadRequest = async (request, dummyUrl) => {
         const fallbackUrl = getFallbackUrl(filename);
         const timeoutId = setTimeout(() => abortController.abort(), 2000);
         try {
-            const testResponse = await fetch(url, { method: 'HEAD', signal: abortController.signal });
+            const testResponse = await fetch(url, {
+                method: 'HEAD',
+                signal: abortController.signal,
+                targetAddressSpace: getTargetAddressSpace(url)
+            });
             if (!testResponse.ok) throw new Error(`HTTP ${testResponse.status}`);
             console.log(`[BSWN] Local server is reachable! Using local network.`);
         } catch (e) {
@@ -257,6 +270,7 @@ export const initApp = () => {
             console.log('[BSWN] Document visibility changed. hidden:', document.hidden);
             if (document.hidden) {
                 // User explicitly requested to disconnect the cast entirely if the app is backgrounded
+                gaplessPlayer.pause();
                 context.stop();
             }
         };
